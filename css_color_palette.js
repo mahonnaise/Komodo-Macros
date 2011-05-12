@@ -2,7 +2,16 @@
 /*global ko:false, document:false, window:false*/
 
 (function (scimoz) {
-	var parse, filter, registerImages, generateCompletions, cleanup, showColorAutoComplete;
+	var showMessage, parse, filter, registerImages, generateCompletions, cleanup,
+		showColorAutoComplete;
+
+	// shows short messages via calltips
+	showMessage = function (text) {
+		scimoz.callTipShow(0, text);
+		window.setTimeout(function () {
+			scimoz.callTipCancel();
+		}, 400 + text.length / 20 * 1000); // attention grabbing delay + 1s/20 chars
+	};
 
 	// parses the CSS file and returns the color/name pairs from the first comment
 	parse = function (text) {
@@ -17,7 +26,7 @@
 		};
 
 		commentOne = text.match(/\*([^*]|[\r\n]|(\*+([^*\/]|[\r\n])))*\*+/);
-		if (commentOne.length) {
+		if (commentOne && commentOne.length) {
 			lines = commentOne[0].split('\n');
 			for (i = 0, len = lines.length; i < len; i++) {
 				line = lines[i];
@@ -29,6 +38,11 @@
 					}
 				}
 			}
+			if (!colorTable.length) {
+				showMessage('No colors found in first comment. Use #rgb name or #rrggbb name.');
+			}
+		} else {
+			showMessage('No comment found.');
 		}
 		return colorTable;
 	};
