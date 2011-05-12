@@ -1,5 +1,5 @@
 /*jslint strict:false, plusplus:false, regexp:false*/
-/*global ko:false, document:false*/
+/*global ko:false, document:false, window:false*/
 
 (function (scimoz) {
 	var parse, filter, registerImages, generateCompletions, showColorAutoComplete;
@@ -46,7 +46,8 @@
 	};
 
 	// registers the required images with scimoz
-	registerImages = function (colorTable, startId) {
+	// width16 = true, resets the width of the icon column to 16px
+	registerImages = function (colorTable, startId, width16) {
 		var i, len, maxWidth, expandColor, renderToCanvas, renderLabelToData,
 			makeXpm, xpmGrayScalePalette;
 
@@ -129,16 +130,18 @@
 
 			// the XPM comment is critical, blows up otherwise
 			s = '/* XPM */static char * x[] = {"' +
-				(16 + fullWidth) + ' 16 53 1"' +
+				(width16 ? 16 : (16 + fullWidth)) + ' 16 53 1"' +
 				',"* c ' + expandColor(color) + '"' +
 				xpmGrayScalePalette;
 
 			for (i = 0; i < 16; i++) {
 				s += ',"****************';
-				for (x = 0; x < fullWidth; x++) {
-					offset = (i * fullWidth + x) * 4;
-					sum = labelData[offset + 0] + labelData[offset + 1] + labelData[offset + 2];
-					s += chars[Math.round((sum / 3) / 5)];
+				if (!width16) {
+					for (x = 0; x < fullWidth; x++) {
+						offset = (i * fullWidth + x) * 4;
+						sum = labelData[offset + 0] + labelData[offset + 1] + labelData[offset + 2];
+						s += chars[Math.round((sum / 3) / 5)];
+					}
 				}
 				s += '"';
 			}
@@ -177,6 +180,17 @@
 			completions = generateCompletions(colorTable, startId);
 
 			scimoz.autoCShow(0, completions);
+
+			// dumb polling hack - resets the icons to 16x16 sizes once the AC popup is inactive
+			(function () {
+				var dumbPolling = window.setInterval(function () {
+					if (!scimoz.autoCActive()) {
+						registerImages(colorTable, startId, true);
+						window.clearInterval(dumbPolling);
+					}
+				}, 10);
+			}());
+
 		}
 	};
 
