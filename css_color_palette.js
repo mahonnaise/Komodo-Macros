@@ -2,7 +2,7 @@
 /*global ko:false, document:false, window:false*/
 
 (function (scimoz) {
-	var parse, filter, registerImages, generateCompletions, showColorAutoComplete;
+	var parse, filter, registerImages, generateCompletions, cleanup, showColorAutoComplete;
 
 	// parses the CSS file and returns the color/name pairs from the first comment
 	parse = function (text) {
@@ -46,8 +46,7 @@
 	};
 
 	// registers the required images with scimoz
-	// width16 = true, resets the width of the icon column to 16px
-	registerImages = function (colorTable, startId, width16) {
+	registerImages = function (colorTable, startId) {
 		var i, len, maxWidth, expandColor, renderToCanvas, renderLabelToData,
 			makeXpm, xpmGrayScalePalette;
 
@@ -130,18 +129,16 @@
 
 			// the XPM comment is critical, blows up otherwise
 			s = '/* XPM */static char * x[] = {"' +
-				(width16 ? 16 : (16 + fullWidth)) + ' 16 53 1"' +
+				(16 + fullWidth) + ' 16 53 1"' +
 				',"* c ' + expandColor(color) + '"' +
 				xpmGrayScalePalette;
 
 			for (i = 0; i < 16; i++) {
 				s += ',"****************';
-				if (!width16) {
-					for (x = 0; x < fullWidth; x++) {
-						offset = (i * fullWidth + x) * 4;
-						sum = labelData[offset + 0] + labelData[offset + 1] + labelData[offset + 2];
-						s += chars[Math.round((sum / 3) / 5)];
-					}
+				for (x = 0; x < fullWidth; x++) {
+					offset = (i * fullWidth + x) * 4;
+					sum = labelData[offset + 0] + labelData[offset + 1] + labelData[offset + 2];
+					s += chars[Math.round((sum / 3) / 5)];
 				}
 				s += '"';
 			}
@@ -168,6 +165,19 @@
 		);
 	};
 
+	cleanup = function (colorTable, startId) {
+		var dumbPolling = window.setInterval(function () {
+			var i, len,
+				onePixel = '/* XPM */static char * x[] = {"1 1 1 1", "* c #000000", "*"};';
+			if (!scimoz.autoCActive()) {
+				for (i = 0, len = colorTable.length; i < len; i++) {
+					scimoz.registerImage(startId + i, onePixel);
+				}
+				window.clearInterval(dumbPolling);
+			}
+		}, 10);
+	};
+
 	// shows the color auto complete popup
 	showColorAutoComplete = function () {
 		var colorTable, completions, startId = 9001;
@@ -181,16 +191,7 @@
 
 			scimoz.autoCShow(0, completions);
 
-			// dumb polling hack - resets the icons to 16x16 sizes once the AC popup is inactive
-			(function () {
-				var dumbPolling = window.setInterval(function () {
-					if (!scimoz.autoCActive()) {
-						registerImages(colorTable, startId, true);
-						window.clearInterval(dumbPolling);
-					}
-				}, 10);
-			}());
-
+			cleanup(colorTable, startId);
 		}
 	};
 
