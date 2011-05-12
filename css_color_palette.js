@@ -165,6 +165,8 @@
 		);
 	};
 
+	// overwrites the color swatch + description images with a 1x1 pixel once the ac popup disappeared
+	// this is necessary, because the image column doesn't shrink to fit (unlike the text column)
 	cleanup = function (colorTable, startId) {
 		var dumbPolling = window.setInterval(function () {
 			var i, len,
